@@ -48,6 +48,63 @@ function updateTempoTerm(tempo) {
     }
 }
 
+// Initialize grid
+function initializeGrid() {
+    const gridContainer = document.getElementById('noteGroup');
+    gridContainer.innerHTML = ''; // Clear existing grid
+    gridContainer.style.gridTemplateColumns = `repeat(${numColumns}, 1fr)`;
+
+    for (let i = 1; i <= 10 * numColumns; i++) {
+        const button = document.createElement('button');
+        button.classList.add('grid-btn');
+        button.setAttribute('data-id', i);
+        let indexColumn = i % numColumns;
+        let indexRow = Math.floor(i / numColumns);
+        
+        if (i <= 8 * numColumns) {
+            if (Math.floor((indexColumn - 1) / 8) % 2) {
+                button.classList.add('oddBtn');
+            } else {
+                button.classList.add('evenBtn');
+            }
+
+            if ((indexColumn - 1) % 2 && indexColumn != 0) {
+                button.classList.add('mainDivider');
+            }
+
+            button.addEventListener('mousedown', () => {
+                button.classList.toggle('selected');
+                const index = button.getAttribute('data-id');
+                let buttonRow = 7 - Math.floor(index / numColumns);
+                let buttonColumn = (index - 1) % numColumns;
+                
+                if (button.classList.contains('selected')) {
+                    if (!button.hasAttribute('data-original-bg')) {
+                        button.setAttribute('data-original-bg', button.style.backgroundColor || '');
+                    }
+                    button.setAttribute('border', 'none');
+                    button.style.backgroundColor = noteColor[buttonRow];
+                    
+                    noteGroup[buttonColumn].push(buttonRow);
+                    sound.instrumentTrack.playNote(noteIndex[buttonRow], undefined, undefined, 0.8);
+                    
+                    drawVex();
+                } else {
+                    const originalBg = button.getAttribute('data-original-bg');
+                    button.style.backgroundColor = originalBg || '';
+                    for (let k = 0; k < noteGroup[buttonColumn].length; k++) {
+                        if (noteGroup[buttonColumn][k] == buttonRow)
+                            noteGroup[buttonColumn].splice(k, 1);
+                    }
+                    drawVex();
+                }
+            });
+        }
+        
+        gridContainer.appendChild(button);
+    }
+}
+
 // Toggle play/pause
 function togglePlay() {
     if (!synth) initializeSynth();
@@ -69,6 +126,23 @@ function reset() {
     currentBeat = 0;
     Tone.Transport.position = 0;
     progressBar.style.width = '0%';
+
+    // Reset all buttons including the bottom circular buttons
+    const allButtons = document.querySelectorAll('.grid-btn');
+    allButtons.forEach(button => {
+        const buttonId = parseInt(button.getAttribute('data-id'));
+        // Check if it's a bottom circular button (after the grid)
+        if (buttonId > 8 * numColumns) {
+            button.classList.remove('selected');
+            button.style.width = '50%';
+            button.style.height = '50%';
+            button.style.marginLeft = '25%';
+            button.style.marginTop = '25%';
+            button.style.backgroundColor = '#ccc';
+            button.style.borderRadius = '50%';
+        }
+    });
+
     if (isPlaying) {
         togglePlay();
     }
@@ -132,4 +206,7 @@ updateTempoTerm(120);
 Tone.Transport.scheduleRepeat((time) => {
     const progress = (Tone.Transport.ticks / Tone.Transport.loopEnd) * 100;
     progressBar.style.width = `${progress}%`;
-}, '16n'); 
+}, '16n');
+
+// Initialize the grid on page load
+initializeGrid(); 
